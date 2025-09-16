@@ -1,9 +1,12 @@
-from django.shortcuts import render
-from django.shortcuts import get_object_or_404, redirect
+# cart/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from movies.models import Movie
 from .utils import calculate_cart_total
-from .models import Order, Item
+from .models import Order, Item, CheckoutFeedback
+from .forms import CheckoutFeedbackForm
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
 def index(request):
     cart_total = 0
@@ -56,7 +59,47 @@ def purchase(request):
         item.save()
 
     request.session['cart'] = {}
+    
+    # Create feedback form for the popup
+    feedback_form = CheckoutFeedbackForm()
+    
     template_data = {}
     template_data['title'] = 'Purchase confirmation'
     template_data['order_id'] = order.id
+    template_data['feedback_form'] = feedback_form
+    template_data['order'] = order
     return render(request, 'cart/purchase.html', {'template_data': template_data})
+
+@login_required
+def submit_feedback(request):
+    if request.method == 'POST':
+        form = CheckoutFeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            # Try to link to the most recent order by this user
+            try:
+                recent_order = Order.objects.filter(user=request.user).latest('date')
+                feedback.order = recent_order
+            except Order.DoesNotExist:
+                pass
+            feedback.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Thank you for your feedback!'})
+            else:
+                messages.success(request, 'Thank you for your feedback!')
+                return redirect('home.index')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors})
+    
+    return redirect('home.index')
+
+def feedback_list(request):
+    # Get all feedback ordered by most recent
+    feedback_list = CheckoutFeedback.objects.all().order_by('-date_submitted')
+    
+    template_data = {}
+    template_data['title'] = 'Customer Feedback'
+    template_data['feedback_list'] = feedback_list
+    return render(request, 'cart/feedback_list.html', {'template_data': template_data})

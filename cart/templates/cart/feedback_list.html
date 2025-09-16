@@ -1,0 +1,104 @@
+<!-- cart/templates/cart/feedback_list.html -->
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col mx-auto mb-3">
+        <h2><i class="fas fa-comments"></i> Customer Feedback</h2>
+        <hr />
+        <p class="text-muted">
+          See what our customers are saying about their checkout experience at GT Movie Store!
+        </p>
+      </div>
+    </div>
+    
+    {% if template_data.feedback_list %}
+    <div class="row">
+      <div class="col-md-10 mx-auto">
+        {% for feedback in template_data.feedback_list %}
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h5 class="card-title mb-1">
+                  <i class="fas fa-user-circle text-primary"></i> 
+                  {{ feedback.display_name }}
+                </h5>
+                <small class="text-muted">
+                  <i class="fas fa-calendar"></i> 
+                  {{ feedback.date_submitted|date:"M d, Y \a\t g:i A" }}
+                  {% if feedback.order %}
+                    | <i class="fas fa-shopping-cart"></i> Order #{{ feedback.order.id }}
+                  {% endif %}
+                </small>
+              </div>
+              <div>
+                <span class="badge bg-success">
+                  <i class="fas fa-star"></i> Feedback
+                </span>
+              </div>
+            </div>
+            
+            <div class="feedback-content">
+              <i class="fas fa-quote-left text-muted me-2"></i>
+              <span class="feedback-text">{{ feedback.feedback_text }}</span>
+              <i class="fas fa-quote-right text-muted ms-2"></i>
+            </div>
+            
+            {% if feedback.order %}
+            <div class="mt-3 pt-3 border-top">
+              <small class="text-muted">
+                <i class="fas fa-info-circle"></i> 
+                Order Total: ${{ feedback.order.total }} | 
+                Items: {{ feedback.order.item_set.count }}
+              </small>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Pagination could go here if needed -->
+        {% if template_data.feedback_list|length >= 20 %}
+        <div class="text-center mt-4">
+          <p class="text-muted">Showing recent feedback. More feedback available!</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="row">
+      <div class="col-md-6 mx-auto text-center">
+        <div class="alert alert-info" role="alert">
+          <h4 class="alert-heading">
+            <i class="fas fa-comment-slash"></i> No Feedback Yet!
+          </h4>
+          <p>Be the first to share your checkout experience!</p>
+          <hr>
+          <a class="btn btn-primary" href="{% url 'movies.index' %}">
+            <i class="fas fa-shopping-cart"></i> Start Shopping
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.feedback-content {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid #007bff;
+  margin: 1rem 0;
+}
+
+.feedback-text {
+  font-style: italic;
+  line-height: 1.6;
+}
+</style>
+{% endblock content %}
