@@ -1,0 +1,379 @@
+<!-- movies/templates/movies/show.html -->
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col-md-6 mx-auto mb-3">
+        <h2>{{ template_data.movie.name }}</h2>
+        <hr />
+        <p><b>Description:</b> {{ template_data.movie.description }}</p>
+        <p><b>Price:</b> ${{ template_data.movie.price }}</p>
+        
+        <!-- Movie Rating Section -->
+        <div class="mb-3">
+          <div class="d-flex align-items-center mb-2">
+            <b class="me-3">Rating:</b>
+            <div class="movie-rating-display" id="movie-rating-display">
+              <span class="average-rating" id="average-rating">{{ template_data.movie.average_rating }}</span>
+              <div class="stars-display" id="average-stars">
+                {% for i in "12345" %}
+                  <i class="fas fa-star {% if template_data.movie.average_rating >= i|add:0 %}text-warning{% else %}text-muted{% endif %}"></i>
+                {% endfor %}
+              </div>
+              <small class="text-muted ms-2" id="rating-count">({{ template_data.movie.rating_count }} rating{{ template_data.movie.rating_count|pluralize }})</small>
+            </div>
+          </div>
+          
+          {% if user.is_authenticated %}
+          <div class="user-rating-section">
+            <b class="me-3">Your Rating:</b>
+            <div class="star-rating" data-movie-id="{{ template_data.movie.id }}">
+              {% for i in "12345" %}
+                <i class="fas fa-star star-rating-star" data-rating="{{ i }}" 
+                   {% if template_data.user_rating >= i|add:0 %}style="color: #ffc107;"{% endif %}></i>
+              {% endfor %}
+              <span class="rating-text ms-2">
+                {% if template_data.user_rating %}
+                  You rated this {{ template_data.user_rating }} star{{ template_data.user_rating|pluralize }}
+                {% else %}
+                  Click to rate this movie
+                {% endif %}
+              </span>
+            </div>
+            {% if template_data.user_rating %}
+            <div class="mt-2">
+              <button class="btn btn-sm btn-outline-danger remove-rating-btn" data-movie-id="{{ template_data.movie.id }}">
+                <i class="fas fa-trash"></i> Remove Rating
+              </button>
+            </div>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="text-muted">
+            <a href="{% url 'accounts.login' %}">Login</a> to rate this movie
+          </div>
+          {% endif %}
+        </div>
+        
+        <p class="card-text">
+          <form method="post" action="{% url 'cart.add' id=template_data.movie.id %}">
+            <div class="row">
+              {% csrf_token %}
+              <div class="col-auto">
+                <div class="input-group col-auto">
+                  <div class="input-group-text">Quantity</div>
+                  <input type="number" min="1" max="10" class="form-control quantity-input" name="quantity" value="1">
+                </div>
+              </div>
+              <div class="col-auto">
+                <button class="btn bg-dark text-white" type="submit">Add to cart</button>
+              </div>
+            </div>
+          </form>
+        </p>
+
+        <h2>Reviews</h2>
+        <hr />
+        <ul class="list-group">
+          {% for review in template_data.reviews %}
+          <li class="list-group-item pb-3 pt-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h5 class="card-title mb-1">
+                  Review by {{ review.user.username }}
+                </h5>
+                <h6 class="card-subtitle mb-2 text-muted">
+                  {{ review.date }}
+                </h6>
+              </div>
+              <div>
+                <span class="badge bg-primary">
+                  <i class="fas fa-thumbs-up"></i> {{ review.like_count }}
+                </span>
+              </div>
+            </div>
+            
+            <p class="card-text mb-3">{{ review.comment }}</p>
+            
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                {% if user.is_authenticated and user == review.user %}
+                <a class="btn btn-primary btn-sm"
+                  href="{% url 'movies.edit_review' id=template_data.movie.id review_id=review.id %}">
+                  Edit
+                </a>
+                <a class="btn btn-danger btn-sm"
+                  href="{% url 'movies.delete_review' id=template_data.movie.id review_id=review.id %}">
+                  Delete
+                </a>
+                {% endif %}
+              </div>
+              
+              {% if user.is_authenticated %}
+              <form method="POST" action="{% url 'movies.like_review' id=template_data.movie.id review_id=review.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm {% if user in review.likes.all %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                  <i class="fas fa-thumbs-up"></i> 
+                  {% if user in review.likes.all %}Unlike{% else %}Like{% endif %}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+
+        {% if user.is_authenticated %}
+        <div class="container mt-4">
+          <div class="row justify-content-center">
+            <div class="col-12">
+              <div class="card shadow p-3 mb-4 rounded">
+                <div class="card-body">
+                  <b class="text-start">Create a review</b><br /><br />
+                  <form method="POST" action="{% url 'movies.create_review' id=template_data.movie.id %}">
+                    {% csrf_token %}
+                    <p>
+                      <label for="comment">Comment:</label>
+                      <textarea name="comment" required class="form-control" id="comment"></textarea>
+                    </p>
+
+                    <div class="text-center">
+                      <button type="submit" class="btn bg-dark text-white">
+                        Add Review
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-md-6 mx-auto mb-3 text-center">
+        <img src="{{ template_data.movie.image.url }}" class="rounded img-card-400" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Star Rating JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const starRating = document.querySelector('.star-rating');
+    if (!starRating) return;
+    
+    const stars = starRating.querySelectorAll('.star-rating-star');
+    const ratingText = starRating.querySelector('.rating-text');
+    const movieId = starRating.dataset.movieId;
+    
+    // Add click event listeners to stars
+    stars.forEach((star, index) => {
+        star.addEventListener('click', function() {
+            const rating = parseInt(this.dataset.rating);
+            submitRating(rating);
+        });
+        
+        // Add hover effects
+        star.addEventListener('mouseenter', function() {
+            const rating = parseInt(this.dataset.rating);
+            highlightStars(rating);
+        });
+    });
+    
+    // Reset stars on mouse leave
+    starRating.addEventListener('mouseleave', function() {
+        const currentRating = getCurrentRating();
+        highlightStars(currentRating);
+    });
+    
+    // Add remove rating functionality using event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-rating-btn')) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to remove your rating?')) {
+                removeRating();
+            }
+        }
+    });
+    
+    function highlightStars(rating) {
+        stars.forEach((star, index) => {
+            if (index < rating) {
+                star.style.color = '#ffc107';
+            } else {
+                star.style.color = '#6c757d';
+            }
+        });
+    }
+    
+    function getCurrentRating() {
+        const activeStars = starRating.querySelectorAll('.star-rating-star[style*="color: #ffc107"]');
+        return activeStars.length;
+    }
+    
+    function submitRating(rating) {
+        // Show loading state
+        ratingText.textContent = 'Submitting rating...';
+        
+        // Submit rating via AJAX
+        fetch(`/movies/${movieId}/rate/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `rating=${rating}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI with new rating data
+                updateRatingDisplay(data);
+                ratingText.textContent = `You rated this ${rating} star${rating > 1 ? 's' : ''}`;
+            } else {
+                ratingText.textContent = 'Error submitting rating';
+                console.error('Rating error:', data.error);
+            }
+        })
+        .catch(error => {
+            ratingText.textContent = 'Error submitting rating';
+            console.error('Rating error:', error);
+        });
+    }
+    
+    function removeRating() {
+        const removeBtn = document.querySelector('.remove-rating-btn');
+        if (removeBtn) {
+            removeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+            removeBtn.disabled = true;
+        }
+        
+        // Submit remove rating request via AJAX
+        fetch(`/movies/${movieId}/remove-rating/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI with removed rating data
+                updateRatingDisplay(data);
+                
+                // Reset user rating display
+                stars.forEach(star => {
+                    star.style.color = '#6c757d';
+                });
+                ratingText.textContent = 'Click to rate this movie';
+                
+                // Hide remove button container
+                const removeBtnContainer = document.querySelector('.remove-rating-btn')?.parentElement;
+                if (removeBtnContainer) {
+                    removeBtnContainer.style.display = 'none';
+                }
+            } else {
+                ratingText.textContent = 'Error removing rating';
+                console.error('Remove rating error:', data.error);
+                
+                // Reset button
+                if (removeBtn) {
+                    removeBtn.innerHTML = '<i class="fas fa-trash"></i> Remove Rating';
+                    removeBtn.disabled = false;
+                }
+            }
+        })
+        .catch(error => {
+            ratingText.textContent = 'Error removing rating';
+            console.error('Remove rating error:', error);
+            
+            // Reset button
+            if (removeBtn) {
+                removeBtn.innerHTML = '<i class="fas fa-trash"></i> Remove Rating';
+                removeBtn.disabled = false;
+            }
+        });
+    }
+    
+    function updateRatingDisplay(data) {
+        // Update average rating display using specific IDs
+        const averageRatingSpan = document.getElementById('average-rating');
+        const starsDisplay = document.getElementById('average-stars');
+        const ratingCountSpan = document.getElementById('rating-count');
+        
+        if (averageRatingSpan) {
+            averageRatingSpan.textContent = data.average_rating;
+        }
+        
+        if (starsDisplay) {
+            const stars = starsDisplay.querySelectorAll('.fas.fa-star');
+            stars.forEach((star, index) => {
+                if (data.average_rating >= index + 1) {
+                    star.className = 'fas fa-star text-warning';
+                } else {
+                    star.className = 'fas fa-star text-muted';
+                }
+            });
+        }
+        
+        if (ratingCountSpan) {
+            const count = data.rating_count;
+            ratingCountSpan.textContent = `(${count} rating${count !== 1 ? 's' : ''})`;
+        }
+        
+        // Show/hide remove button based on user rating
+        const removeBtnContainer = document.querySelector('.remove-rating-btn')?.parentElement;
+        if (removeBtnContainer) {
+            if (data.user_rating) {
+                removeBtnContainer.style.display = 'block';
+                // Reset button state in case it was stuck
+                const removeBtn = removeBtnContainer.querySelector('.remove-rating-btn');
+                if (removeBtn) {
+                    removeBtn.innerHTML = '<i class="fas fa-trash"></i> Remove Rating';
+                    removeBtn.disabled = false;
+                }
+            } else {
+                removeBtnContainer.style.display = 'none';
+            }
+        }
+    }
+});
+</script>
+
+<style>
+.star-rating-star {
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: color 0.2s ease;
+}
+
+.star-rating-star:hover {
+    color: #ffc107 !important;
+}
+
+.movie-rating-display {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.stars-display {
+    display: flex;
+    gap: 2px;
+}
+
+.user-rating-section {
+    margin-top: 10px;
+}
+
+.rating-text {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+</style>
+
+{% endblock content %}
