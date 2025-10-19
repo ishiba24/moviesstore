@@ -1,0 +1,99 @@
+# movies/views.py - CORRECTED VERSION
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import Movie, Review
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.db import models
+
+def index(request):
+    search_term = request.GET.get('search')
+    if search_term:
+        movies = Movie.objects.filter(name__icontains=search_term)
+    else:
+        movies = Movie.objects.all()
+
+    template_data = {}
+    template_data['title'] = 'Movies'
+    template_data['movies'] = movies
+    return render(request, 'movies/index.html', {'template_data': template_data})
+
+def show(request, id):
+    movie = Movie.objects.get(id=id)
+    # CORRECTED: Use annotate to add like_count, then order by it
+    reviews = Review.objects.filter(movie=movie).annotate(
+        like_count=models.Count('likes')
+    ).order_by('-like_count', '-date')
+
+    template_data = {}
+    template_data['title'] = movie.name
+    template_data['movie'] = movie
+    template_data['reviews'] = reviews
+    return render(request, 'movies/show.html', {'template_data': template_data})
+
+@login_required
+def create_review(request, id):
+    if request.method == 'POST' and request.POST['comment'] != '':
+        movie = Movie.objects.get(id=id)
+        review = Review()
+        review.comment = request.POST['comment']
+        review.movie = movie
+        review.user = request.user
+        review.save()
+        return redirect('movies.show', id=id)
+    else:
+        return redirect('movies.show', id=id)
+
+@login_required
+def edit_review(request, id, review_id):
+    review = get_object_or_404(Review, id=review_id)
+    if request.user != review.user:
+        return redirect('movies.show', id=id)
+
+    if request.method == 'GET':
+        template_data = {}
+        template_data['title'] = 'Edit Review'
+        template_data['review'] = review
+        return render(request, 'movies/edit_review.html', {'template_data': template_data})
+    elif request.method == 'POST' and request.POST['comment'] != '':
+        review = Review.objects.get(id=review_id)
+        review.comment = request.POST['comment']
+        review.save()
+        return redirect('movies.show', id=id)
+    else:
+        return redirect('movies.show', id=id)
+
+@login_required
+def delete_review(request, id, review_id):
+    review = get_object_or_404(Review, id=review_id, user=request.user)
+    review.delete()
+    return redirect('movies.show', id=id)
+
+@login_required
+def like_review(request, id, review_id):
+    review = get_object_or_404(Review, id=review_id)
+    
+    if request.user in review.likes.all():
+        review.likes.remove(request.user)
+        liked = False
+    else:
+        review.likes.add(request.user)
+        liked = True
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'liked': liked,
+            'like_count': review.like_count()
+        })
+    
+    return redirect('movies.show', id=id)
+
+def top_comments(request):
+    # Get all reviews ordered by like count (descending)
+    top_reviews = Review.objects.annotate(
+        like_count=models.Count('likes')
+    ).order_by('-like_count', '-date')[:20]  # Top 20 reviews
+    
+    template_data = {}
+    template_data['title'] = 'Top Comments'
+    template_data['reviews'] = top_reviews
+    return render(request, 'movies/top_comments.html', {'template_data': template_data})

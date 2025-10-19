@@ -1,0 +1,114 @@
+<!-- movies/templates/movies/show.html -->
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col-md-6 mx-auto mb-3">
+        <h2>{{ template_data.movie.name }}</h2>
+        <hr />
+        <p><b>Description:</b> {{ template_data.movie.description }}</p>
+        <p><b>Price:</b> ${{ template_data.movie.price }}</p>
+        <p class="card-text">
+          <form method="post" action="{% url 'cart.add' id=template_data.movie.id %}">
+            <div class="row">
+              {% csrf_token %}
+              <div class="col-auto">
+                <div class="input-group col-auto">
+                  <div class="input-group-text">Quantity</div>
+                  <input type="number" min="1" max="10" class="form-control quantity-input" name="quantity" value="1">
+                </div>
+              </div>
+              <div class="col-auto">
+                <button class="btn bg-dark text-white" type="submit">Add to cart</button>
+              </div>
+            </div>
+          </form>
+        </p>
+
+        <h2>Reviews</h2>
+        <hr />
+        <ul class="list-group">
+          {% for review in template_data.reviews %}
+          <li class="list-group-item pb-3 pt-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h5 class="card-title mb-1">
+                  Review by {{ review.user.username }}
+                </h5>
+                <h6 class="card-subtitle mb-2 text-muted">
+                  {{ review.date }}
+                </h6>
+              </div>
+              <div>
+                <span class="badge bg-primary">
+                  <i class="fas fa-thumbs-up"></i> {{ review.like_count }}
+                </span>
+              </div>
+            </div>
+            
+            <p class="card-text mb-3">{{ review.comment }}</p>
+            
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                {% if user.is_authenticated and user == review.user %}
+                <a class="btn btn-primary btn-sm"
+                  href="{% url 'movies.edit_review' id=template_data.movie.id review_id=review.id %}">
+                  Edit
+                </a>
+                <a class="btn btn-danger btn-sm"
+                  href="{% url 'movies.delete_review' id=template_data.movie.id review_id=review.id %}">
+                  Delete
+                </a>
+                {% endif %}
+              </div>
+              
+              {% if user.is_authenticated %}
+              <form method="POST" action="{% url 'movies.like_review' id=template_data.movie.id review_id=review.id %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm {% if user in review.likes.all %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                  <i class="fas fa-thumbs-up"></i> 
+                  {% if user in review.likes.all %}Unlike{% else %}Like{% endif %}
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+
+        {% if user.is_authenticated %}
+        <div class="container mt-4">
+          <div class="row justify-content-center">
+            <div class="col-12">
+              <div class="card shadow p-3 mb-4 rounded">
+                <div class="card-body">
+                  <b class="text-start">Create a review</b><br /><br />
+                  <form method="POST" action="{% url 'movies.create_review' id=template_data.movie.id %}">
+                    {% csrf_token %}
+                    <p>
+                      <label for="comment">Comment:</label>
+                      <textarea name="comment" required class="form-control" id="comment"></textarea>
+                    </p>
+
+                    <div class="text-center">
+                      <button type="submit" class="btn bg-dark text-white">
+                        Add Review
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="col-md-6 mx-auto mb-3 text-center">
+        <img src="{{ template_data.movie.image.url }}" class="rounded img-card-400" />
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

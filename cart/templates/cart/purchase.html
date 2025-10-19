@@ -1,0 +1,132 @@
+<!-- cart/templates/cart/purchase.html -->
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col mx-auto mb-3">
+        <h2>Purchase Completed</h2>
+        <hr />
+        <p>Congratulations, purchase completed. Order number is: <b>#{{ template_data.order_id }}</b></p>
+        <div class="text-center mt-4">
+          <a href="{% url 'movies.index' %}" class="btn btn-primary">Continue Shopping</a>
+          <a href="{% url 'home.index' %}" class="btn btn-outline-secondary">Go Home</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="feedbackModalLabel">
+          <i class="fas fa-star"></i> Help Us Improve GT Movie Store!
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-4">
+          <i class="fas fa-heart text-danger"></i> 
+          We'd love to hear about your checkout experience! Your feedback helps us make GT Movie Store even better.
+        </p>
+        
+        <form id="feedbackForm" method="POST" action="{% url 'cart.submit_feedback' %}">
+          {% csrf_token %}
+          
+          <div class="mb-3">
+            <label for="{{ template_data.feedback_form.name.id_for_label }}" class="form-label">
+              {{ template_data.feedback_form.name.label }}
+            </label>
+            {{ template_data.feedback_form.name }}
+            <div class="form-text">
+              <i class="fas fa-info-circle"></i> 
+              Leave this blank if you'd prefer to remain anonymous
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="{{ template_data.feedback_form.feedback_text.id_for_label }}" class="form-label">
+              {{ template_data.feedback_form.feedback_text.label }} <span class="text-danger">*</span>
+            </label>
+            {{ template_data.feedback_form.feedback_text }}
+            <div class="form-text">
+              <i class="fas fa-lightbulb"></i> 
+              Tell us what you liked, what could be improved, or any suggestions!
+            </div>
+          </div>
+          
+          <div id="feedbackErrors" class="alert alert-danger d-none"></div>
+          <div id="feedbackSuccess" class="alert alert-success d-none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-primary" id="submitFeedback">
+          <i class="fas fa-paper-plane"></i> Submit Feedback
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show the feedback modal automatically after a short delay
+    setTimeout(function() {
+        var feedbackModal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+        feedbackModal.show();
+    }, 1000); // Show after 1 second
+    
+    // Handle feedback form submission
+    document.getElementById('submitFeedback').addEventListener('click', function() {
+        var form = document.getElementById('feedbackForm');
+        var formData = new FormData(form);
+        
+        // Hide previous messages
+        document.getElementById('feedbackErrors').classList.add('d-none');
+        document.getElementById('feedbackSuccess').classList.add('d-none');
+        
+        fetch('{% url "cart.submit_feedback" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                document.getElementById('feedbackSuccess').textContent = data.message;
+                document.getElementById('feedbackSuccess').classList.remove('d-none');
+                
+                // Close modal after 2 seconds
+                setTimeout(function() {
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal'));
+                    modal.hide();
+                }, 2000);
+            } else {
+                // Show error messages
+                var errorText = '';
+                for (var field in data.errors) {
+                    errorText += data.errors[field].join(', ') + ' ';
+                }
+                document.getElementById('feedbackErrors').textContent = errorText;
+                document.getElementById('feedbackErrors').classList.remove('d-none');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('feedbackErrors').textContent = 'An error occurred. Please try again.';
+            document.getElementById('feedbackErrors').classList.remove('d-none');
+        });
+    });
+});
+</script>
+{% endblock content %}
